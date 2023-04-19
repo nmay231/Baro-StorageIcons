@@ -8,7 +8,6 @@ function StorageIcons.resetCache()
     cache = {}
 end
 
-
 local function inWhitelist(identifier)
     for k in pairs(StorageIcons.Config["whitelistItems"]) do
         if identifier == k then
@@ -24,7 +23,7 @@ Hook.Add("inventoryPutItem", "moveItem", function(inventory, item, characterUser
     local targetInventory = inventory.Owner
     if inWhitelist(targetInventory.Prefab.Identifier) and cache[targetInventory.ID] then
         cache[targetInventory.ID]["update"] = true
-    -- scale may need to be updated due to some inventories having different scale
+        -- scale may need to be updated due to some inventories having different scale
     elseif inWhitelist(item.Prefab.Identifier) and cache[item.ID] then
         cache[item.ID]["update"] = true
     end
@@ -69,6 +68,11 @@ Hook.Patch("Barotrauma.Items.Components.RangedWeapon", "Use", function(instance,
     end
 end)
 
+local function drawInventory(spriteBatch, inventoryCache)
+    if (inventoryCache).len == 0 then return end
+    if (inventoryCache).len == 1 then return end
+end
+
 
 Hook.Patch("Barotrauma.Inventory", "DrawSlot", function(instance, ptable)
     if not ptable["drawItem"] then return end
@@ -81,7 +85,8 @@ Hook.Patch("Barotrauma.Inventory", "DrawSlot", function(instance, ptable)
     local itemCache = cache[item.ID]
     if itemCache then
         if not itemCache["update"] then
-            itemCache["sprite"].Draw(itemCache["spriteBatch"], slot.Rect.Center.ToVector2(), itemCache["color"], itemCache["rotation"], itemCache["scale"])
+            itemCache["sprite"].Draw(itemCache["spriteBatch"], slot.Rect.Center.ToVector2(), itemCache["color"],
+                itemCache["rotation"], itemCache["scale"])
             return
         end
     end
@@ -100,11 +105,7 @@ Hook.Patch("Barotrauma.Inventory", "DrawSlot", function(instance, ptable)
     -- Determine which item is the most abundant and set sprite and color accordingly
     for v in itemList do
         local id = v.Prefab.Identifier
-        if itemCounts[id] then
-            itemCounts[id] = itemCounts[id] + 1
-        else
-            itemCounts[id] = 1
-        end
+        itemCounts[id] = (itemCounts[id] or 0) + 1
         if itemCounts[id] > maxCount then
             sprite = v.Prefab.InventoryIcon
             -- noticed a modded item didn't have an InventoryIcon, idk if it's supposed to be optional
@@ -115,18 +116,27 @@ Hook.Patch("Barotrauma.Inventory", "DrawSlot", function(instance, ptable)
             maxCount = itemCounts[id]
         end
     end
-    local scale = math.min(math.min((rect.Width - 10) / sprite.size.X, (rect.Height - 10) / sprite.size.Y), 2.0) * StorageIcons.Config["iconScale"]
+    -- store draw arguments to be used instead of recalculating if the inventory was not uppdated
+    cache[item.ID] = {
+        sprites = {},
+        -- sprite = sprite,
+        -- spriteBatch = spriteBatch,
+        color = color,
+        scale = scale,
+        rotation = 0,
+        update = false,
+    }
+    cache[item.ID].sprite = sprite
+    cache[item.ID].spriteBatch = spriteBatch
+    cache[item.ID].color = color
+    cache[item.ID].rotation = rotation
+    cache[item.ID].scale = scale
+    cache[item.ID].update = false
+    local scale = math.min(math.min((rect.Width - 10) / sprite.size.X, (rect.Height - 10) / sprite.size.Y), 2.0) *
+        StorageIcons.Config["iconScale"]
     local itemPos = rect.Center.ToVector2()
     local rotation = 0
     sprite.Draw(spriteBatch, itemPos, color, rotation, scale)
-    -- store draw arguments to be used instead of recalculating if the inventory was not uppdated
-    cache[item.ID] = {}
-    cache[item.ID]["sprite"] = sprite
-    cache[item.ID]["spriteBatch"] = spriteBatch
-    cache[item.ID]["color"] = color
-    cache[item.ID]["rotation"] = rotation
-    cache[item.ID]["scale"] = scale
-    cache[item.ID]["update"] = false
 end, Hook.HookMethodType.After)
 
 
