@@ -115,6 +115,20 @@ Hook.Patch("Barotrauma.Inventory", "DrawSlot", function(instance, ptable)
     local spriteBatch = ptable["spriteBatch"]
     local rect = ptable["slot"].Rect
 
+    -- BEGIN temporary background testing
+    local function cycler(cycleTime, nCycles)
+        return function(which) return math.floor(os.time() / cycleTime) % nCycles == which end
+    end
+    local onCycle = cycler(4, 3)
+    local backgroundColor = Color(128, 128, 128, 128)
+
+    if (not item.OwnInventory.IsEmpty() and onCycle(0)) or onCycle(1) then
+        local background = Sprite('Content/UI/OuterGlow.png')
+        local backgroundScale = math.min(2.0, rect.Width / background.size.X, rect.Height / background.size.Y)
+        background.Draw(spriteBatch, Vector2(rect.X, rect.Y), backgroundColor, 0, backgroundScale)
+    end
+    -- END temporary background testing
+
     if itemCache then
         if not itemCache["update"] then
             drawItems(spriteBatch, rect, itemCache)
