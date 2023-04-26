@@ -66,64 +66,58 @@ Game.AddCommand("storageicons", "configures storageicons", function (command)
             end
         end
 
-        if command[2] then
-            if not itemsInvalid then
-                -- validate that the command will succeed before changing the config
-                local failed
-                for identifier in identifiers do
-                    if command[1] == "add" then
-                        if StorageIcons.Config["whitelistItems"][identifier] then
-                            print("\"", ItemPrefab.GetItemPrefab(identifier), "\" is already in the whitelist")
-                            failed = true
-                        end
-                    else
-                        if not StorageIcons.Config["whitelistItems"][identifier] then
-                            print("failed to remove \"", ItemPrefab.GetItemPrefab(identifier), "\", not in the whitelist")
-                            failed = true
-                        end
-                    end
-                end
-                if not failed then
-                    for identifier in identifiers do
-                        if command[1] == "add" then
-                            StorageIcons.Config["whitelistItems"][identifier] = true
-                        else
-                            StorageIcons.Config["whitelistItems"][identifier] = false
-                        end
-                    end
-                    writeConfig()
-                    if command[1] == "add" then
-                        print(#command - 1, " item(s) have been added to the whitelist")
-                    else
-                        print(#command - 1, " item(s) have been removed from the whitelist")
-                    end
-                else
-                    if command[1] == "add" then
-                        print("one or more items were already in the whitelist, config was not modified")
-                    else
-                        print("one or more items were not in the whitelist, config was not modified")
-                    end
-                end
-            else
-                print("one or more items could not be found, config was not changed")
-            end
-        else
+        if not command[2] then
             print(helpTexts["add"])
+            return
+        end
+        if itemsInvalid then
+            print("one or more items could not be found, config was not changed")
+            return
         end
 
-    elseif command[1] == "remove" then
-        if command[2] then
-            local prefab = ItemPrefab.GetItemPrefab(command[2])
-            local identifier = tostring(prefab.Identifier)
-            StorageIcons.Config["whitelistItems"][identifier] = nil
-            writeConfig()
+        -- validate that the command will succeed before changing the config
+        local failed
+        for identifier in identifiers do
+            if command[1] == "add" then
+                if StorageIcons.Config["whitelistItems"][identifier] then
+                    print("\"", ItemPrefab.GetItemPrefab(identifier), "\" is already in the whitelist")
+                    failed = true
+                end
+            else
+                if not StorageIcons.Config["whitelistItems"][identifier] then
+                    print("failed to remove \"", ItemPrefab.GetItemPrefab(identifier), "\", not in the whitelist")
+                    failed = true
+                end
+            end
+        end
+
+        if failed then
+            if command[1] == "add" then
+                print("one or more items were already in the whitelist, config was not modified")
+            else
+                print("one or more items were not in the whitelist, config was not modified")
+            end
+            return
+        end
+
+        for identifier in identifiers do
+            if command[1] == "add" then
+                StorageIcons.Config["whitelistItems"][identifier] = true
+            else
+                StorageIcons.Config["whitelistItems"][identifier] = false
+            end
+        end
+        writeConfig()
+        if command[1] == "add" then
+            print(#command - 1, " item(s) have been added to the whitelist")
         else
-            print(helpTexts["remove"])
+            print(#command - 1, " item(s) have been removed from the whitelist")
         end
 
     elseif command[1] == "reset" then
         if confirmReset then
-            File.Write(StorageIcons.Path .. "/config.json", json.serialize(dofile(StorageIcons.Path .. "/Lua/defaultconfig.lua")))
+            File.Write(StorageIcons.Path .. "/config.json",
+                json.serialize(dofile(StorageIcons.Path .. "/Lua/defaultconfig.lua")))
             StorageIcons.Config = json.parse(File.Read(StorageIcons.Path .. "/config.json"))
             StorageIcons.resetCache()
             print("Config has been reset")
@@ -139,22 +133,22 @@ Game.AddCommand("storageicons", "configures storageicons", function (command)
         end
 
     elseif command[1] == "scale" then
-        local scale
-        if command[2] then
-            local success = pcall(function()
-                scale = tonumber(command[2])
-            end)
-            if success then
-                StorageIcons.Config["iconScale"] = scale
-                writeConfig()
-                StorageIcons.resetCache()
-            else
-                print("Could not convert \"", command[2], "\" to a number")
-            end
-        else
+        if not command[2] then
             print(helpTexts["scale"])
             print("Current scale is ", StorageIcons.Config["iconScale"])
+            return
         end
+
+        local scale = tonumber(command[2])
+        if scale == nil then
+            print("Could not convert \"", command[2], "\" to a number")
+            return
+        end
+
+        StorageIcons.Config["iconScale"] = scale
+        writeConfig()
+        StorageIcons.resetCache()
+
     else
         print(helpTexts["help"])
     end
