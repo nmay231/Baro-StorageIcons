@@ -151,6 +151,9 @@ Hook.Patch("Barotrauma.Inventory", "DrawSlot", function(instance, ptable)
         end
     end
 
+    -- TODO: Find out spriteBatch unique id
+    print(item.ID, spriteBatch.ID)
+
     -- pick (up to) the four most abundant items
     table.sort(prefabs, function(a, b) return itemCounts[a] > itemCounts[b] end)
     local abundant = table.pack(table.unpack(prefabs, 1, math.min(4, #prefabs)))
